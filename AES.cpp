@@ -10,6 +10,9 @@ Date Started:
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <string>
+#include <sstream>
+#include <iomanip>
 using namespace std;
 
 unsigned char s_box[256] = {
@@ -65,6 +68,13 @@ unsigned char key[16] =
 	0x16, 0XA6, 0X88, 0x3C
 };
 
+unsigned int cx[16] =
+{
+	2, 3, 1, 1,
+	1, 2, 3, 1,
+	1, 2, 2, 3,
+	3, 1, 1, 2
+};
 
 void print_msg(unsigned char * state) {
 
@@ -133,6 +143,56 @@ void shiftRows(unsigned char* state) {
 
 }
 
+void mixColumns(unsigned char* state)
+{
+	unsigned char temp[16];
+	unsigned char pol = 0x11B;
+	unsigned char mult = 0x00;
+	unsigned char stata[16] =
+	{
+		0x87, 0xf2, 0x4d, 0x97,
+		0x6e, 0x4c, 0x90, 0xec,
+		0x46, 0xe7, 0x4a, 0xc3,
+		0xa6, 0x8c, 0xd8, 0x95
+	};
+
+	for (int i = 0; i < 16; i++)
+	{
+		stata[i] = state[i];
+	}
+
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			int sum = 0;
+			for (int k = 0; k < 4; k++)
+			{
+				if (cx[i * 4 + k] == 3)
+				{
+					mult = stata[k * 4 + j];
+
+				}
+				else
+				{
+					mult = 0x00;
+				}
+
+				sum = sum ^ ((stata[k * 4 + j] << 1 & 0xff) ^ 0x11b ^ mult);
+				cout << hex << sum << endl;
+			}
+
+			temp[i * 4 + j] = sum;
+		}
+
+	}
+
+	for (int i = 0; i < 16; i++)
+	{
+		state[i] = temp[i];
+	}
+
+
+}
+
 
 int main() {
 
@@ -141,6 +201,9 @@ int main() {
 	print_msg(plaintext);
 	cout << endl;
 	shiftRows(plaintext);
+	print_msg(plaintext);
+	cout << endl;
+	mixColumns(plaintext);
 	print_msg(plaintext);
 
 
