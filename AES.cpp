@@ -13,6 +13,7 @@ Date Started:
 #include <string>
 #include <sstream>
 #include <iomanip>
+
 using namespace std;
 
 unsigned char mult2[] = {
@@ -52,6 +53,8 @@ unsigned char mult3[] = {
 	0x3b,0x38,0x3d,0x3e,0x37,0x34,0x31,0x32,0x23,0x20,0x25,0x26,0x2f,0x2c,0x29,0x2a,
 	0x0b,0x08,0x0d,0x0e,0x07,0x04,0x01,0x02,0x13,0x10,0x15,0x16,0x1f,0x1c,0x19,0x1a
 };
+
+
 
 unsigned char s_box[256] = {
 
@@ -106,11 +109,20 @@ unsigned char key[16] =
 	0x16, 0XA6, 0X88, 0x3C
 };
 
+
+unsigned char key3[16] =
+{
+	0x2B, 0x7e, 0x15, 0x16,
+	0x28, 0xae, 0xd2, 0xa6,
+	0xab, 0xf7, 0x15, 0x88,
+	0x09, 0xcf, 0x4f, 0x3c
+};
+
 unsigned int cx[16] =
 {
 	2, 3, 1, 1,
 	1, 2, 3, 1,
-	1, 2, 2, 3,
+	1, 1, 2, 3,
 	3, 1, 1, 2
 };
 
@@ -124,8 +136,87 @@ void print_msg(unsigned char * state) {
 	}
 }
 
+void rotate(unsigned char *in) {
+	unsigned char a, c;
+	a = in[0];
+	for (c = 0; c<3; c++)
+		in[c] = in[c + 1];
+	in[3] = a;
+	return;
+}
 
+unsigned char gmul(unsigned char a, unsigned char b) {
+	unsigned char p = 0;
+	unsigned char counter;
+	unsigned char hi_bit_set;
+	for (counter = 0; counter < 8; counter++) {
+		if ((b & 1) == 1)
+			p ^= a;
+		hi_bit_set = (a & 0x80);
+		a <<= 1;
+		if (hi_bit_set == 0x80)
+			a ^= 0x1b;
+		b >>= 1;
+	}
+	return p;
+}
 
+unsigned char rcon(unsigned char in) {
+	unsigned char c = 1;
+	if (in == 0)
+		return 0;
+	while (in != 1) {
+		c = gmul(c, 2);
+		in--;
+	}
+	return c;
+}
+
+void schedule_core(unsigned char *in, unsigned char i) {
+	char a;
+	/* Rotate the input 8 bits to the left */
+	rotate(in);
+	/* Apply Rijndael's s-box on all 4 bytes */
+	for (a = 0; a < 4; a++)
+		in[a] = s_box[in[a]];
+	/* On just the first byte, add 2^i to the byte */
+	in[0] ^= rcon(i);
+}
+
+void expand_key(unsigned char *in) {
+	unsigned char t[4];
+	/* c is 16 because the first sub-key is the user-supplied key */
+	unsigned char c = 16;
+	unsigned char i = 1;
+	unsigned char a;
+
+	/* We need 11 sets of sixteen bytes each for 128-bit mode */
+	while (c < 176) {
+		/* Copy the temporary variable over from the last 4-byte
+		* block */
+		for (a = 0; a < 4; a++)
+			t[a] = in[a + c - 4];
+		/* Every four blocks (of four bytes),
+		* do a complex calculation */
+		if (c % 16 == 0) {
+			schedule_core(t, i);
+			i++;
+		}
+		for (a = 0; a < 4; a++) {
+			in[c] = in[c - 16] ^ t[a];
+			c++;
+		}
+	}
+
+	for (int j = 0; j< 176; j++) {
+
+		if (j % 4 == 0)
+			cout << endl;
+		if (j % 16 == 0)
+			cout << endl;
+		printf("%02X\t", key3[j]);
+	}
+}
 
 void addRoundKey(unsigned char* state, unsigned char* roundKey) {
 
@@ -195,12 +286,12 @@ void mixColumns(unsigned char* state)
 		0xa6, 0x8c, 0xd8, 0x95
 	};
 
-	/*
+	
 	for (int i = 0; i < 16; i++)
 	{
 		stata[i] = state[i];
 	}
-	*/
+	
 
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
@@ -239,15 +330,63 @@ void mixColumns(unsigned char* state)
 
 int main() {
 
+	unsigned char keyE[16];
+
+	cout << "addroundkey 1: " << endl;
 	addRoundKey(plaintext, key);
+	print_msg(plaintext);
+	cout << endl;
+
+
+	for (int i = 1; i <= 9; i++)
+	{
+		cout << "subBytes 1: " << endl;
+		subBytes(plaintext);
+		print_msg(plaintext);
+		cout << endl;
+		cout << "Shift Rows 1: " << endl;
+		shiftRows(plaintext);
+		print_msg(plaintext);
+		cout << endl;
+		cout << "mixColumns 1: " << endl;
+		mixColumns(plaintext);
+		print_msg(plaintext);
+		cout << endl;
+
+		expand_key(key3);
+
+		copy(key3 + i*16, key3 + i*32, keyE);
+
+		for (int i = 0; i < 4; ++i)
+			for (int j = i + 1; j < 4; ++j)
+				std::swap(keyE[4 * i + j], keyE[4 * j + i]);
+
+		cout << "addroundkey 1: " << endl;
+		addRoundKey(plaintext, keyE);
+		print_msg(plaintext);
+		cout << endl;
+	}
+
+	cout << "subBytes 1: " << endl;
 	subBytes(plaintext);
 	print_msg(plaintext);
 	cout << endl;
+	cout << "Shift Rows 1: " << endl;
 	shiftRows(plaintext);
 	print_msg(plaintext);
 	cout << endl;
-	mixColumns(plaintext);
+
+	copy(key3 + 288, key3 + 304, keyE);
+
+	for (int i = 0; i < 4; ++i)
+		for (int j = i + 1; j < 4; ++j)
+			std::swap(keyE[4 * i + j], keyE[4 * j + i]);
+
+	cout << "addroundkey 2: " << endl;
+	addRoundKey(plaintext, keyE);
 	print_msg(plaintext);
+	cout << endl;
+
 
 
 
