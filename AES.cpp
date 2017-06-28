@@ -145,6 +145,8 @@ void rotate(unsigned char *in) {
 	return;
 }
 
+
+/* gmul subroutine copied from Wikipedia's*/
 unsigned char gmul(unsigned char a, unsigned char b) {
 	unsigned char p = 0;
 	unsigned char counter;
@@ -174,7 +176,7 @@ unsigned char rcon(unsigned char in) {
 
 void schedule_core(unsigned char *in, unsigned char i) {
 	char a;
-	/* Rotate the input 8 bits to the left */
+	/* LeftRotate the input 8 bits */
 	rotate(in);
 	/* Apply Rijndael's s-box on all 4 bytes */
 	for (a = 0; a < 4; a++)
@@ -185,19 +187,17 @@ void schedule_core(unsigned char *in, unsigned char i) {
 
 void expand_key(unsigned char *in) {
 	unsigned char t[4];
-	/* c is 16 because the first sub-key is the user-supplied key */
+	/* c = 16; first sub-key is the input key*/
 	unsigned char c = 16;
 	unsigned char i = 1;
 	unsigned char a;
 
-	/* We need 11 sets of sixteen bytes each for 128-bit mode */
+	//11 sets of sixteen bytes each for 128-bit mode */
 	while (c < 176) {
-		/* Copy the temporary variable over from the last 4-byte
-		* block */
+		// Copy the temporary variable over from the last 4-byte
 		for (a = 0; a < 4; a++)
 			t[a] = in[a + c - 4];
-		/* Every four blocks (of four bytes),
-		* do a complex calculation */
+		/* Every four blocks*/
 		if (c % 16 == 0) {
 			schedule_core(t, i);
 			i++;
