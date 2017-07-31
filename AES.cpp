@@ -319,12 +319,11 @@ int main() {
 		cout << endl;
 
 		expand_key(key3);
-
-		copy(key3 + i*16, key3 + i*32, keyE);
-
-		for (int i = 0; i < 4; ++i)
-			for (int j = i + 1; j < 4; ++j)
-				std::swap(keyE[4 * i + j], keyE[4 * j + i]);
+		copy(key3 + i*16, key3 + i*16+16, keyE);
+	
+	for (int i = 0; i < 4; ++i)
+		for (int j = i + 1; j < 4; ++j)
+			std::swap(keyE[4 * i + j], keyE[4 * j + i]);
 
 		cout << "addroundkey 1: " << endl;
 		addRoundKey(plaintext, keyE);
@@ -342,8 +341,7 @@ int main() {
 	cout << endl;
 
 	expand_key(key3);
-
-	copy(key3 + 160, key3 + 320, keyE);
+	copy(key3 + 160, key3 + 176, keyE);
 
 	for (int i = 0; i < 4; ++i)
 		for (int j = i + 1; j < 4; ++j)
