@@ -207,15 +207,6 @@ void expand_key(unsigned char *in) {
 			c++;
 		}
 	}
-
-	for (int j = 0; j< 176; j++) {
-
-		if (j % 4 == 0)
-			cout << endl;
-		if (j % 16 == 0)
-			cout << endl;
-		printf("%02X\t", key3[j]);
-	}
 }
 
 void addRoundKey(unsigned char* state, unsigned char* roundKey) {
@@ -272,61 +263,36 @@ void shiftRows(unsigned char* state) {
 
 }
 
-void mixColumns(unsigned char* state)
-{
-	unsigned char temp[16];
-	unsigned char pol = 0x11B;
-	unsigned char mult = 0x00;
-	unsigned char a, b;
-	unsigned char stata[16] =
-	{
-		0x87, 0xf2, 0x4d, 0x97,
-		0x6e, 0x4c, 0x90, 0xec,
-		0x46, 0xe7, 0x4a, 0xc3,
-		0xa6, 0x8c, 0xd8, 0x95
-	};
 
-	
-	for (int i = 0; i < 16; i++)
-	{
-		stata[i] = state[i];
-	}
-	
 
-	for (int i = 0; i < 4; i++) {
-		for (int j = 0; j < 4; j++) {
-			int sum = 0;
-			for (int k = 0; k < 4; k++)
-			{
-				if (cx[i * 4 + k] == 3)
-				{
-					sum = sum ^ mult3[int(stata[k * 4 + j])];
-				}
-				else if (cx[i * 4 + k] == 2)
-				{
-					sum = sum ^ mult2[int(stata[k * 4 + j])];
-				}
-				else
-				{
-					sum = sum ^ (stata[k * 4 + j]);
-				}
-			}
+void mixColumns(unsigned char* state){
 
-			temp[i * 4 + j] = sum;
+  	/*r0 = 2*a0 + 3*a1 + a2   + a3
+    r1 = a0   + 2*a1 + 3*a2 + a3
+    r2 = a0   + a1   + 2*a2 + 3*a3
+    r3 = 3*a0 + a1   + a2   + 2*a3*/
+
+    unsigned char temp[16];
+    int i;
+
+    for (int i = 0; i < 16; i++){
+
+		temp[i] = state[i];
 		}
 
-	}
+    for(i=0; i<4;i++){
 
-	cout << int(mult2[int(0x01)])  << endl;
+    	 temp[i] = mult2[state[i]] ^ mult3[state[i+4]] ^  state[i+8]  ^  state[i+12];
+    	 temp[i+4] = state[i] ^ mult2[state[i+4]] ^ mult3[state[i+8]] ^ state[i+12];
+    	 temp[i+8] = state[i] ^ state[i+4] ^ mult2[state[i+8]] ^ mult3[state[i+12]];
+		 temp[i+12] = mult3[state[i]] ^ state[i+4] ^ state[i+8] ^ mult2[state[i+12]];
+    	}
 
-	for (int i = 0; i < 16; i++)
-	{
+	for (int i = 0; i < 16; i++){
 		state[i] = temp[i];
 	}
 
-	
 }
-
 
 int main() {
 
@@ -338,8 +304,7 @@ int main() {
 	cout << endl;
 
 
-	for (int i = 1; i <= 9; i++)
-	{
+	for (int i = 1; i <= 9; i++){
 		cout << "subBytes 1: " << endl;
 		subBytes(plaintext);
 		print_msg(plaintext);
@@ -376,7 +341,9 @@ int main() {
 	print_msg(plaintext);
 	cout << endl;
 
-	copy(key3 + 288, key3 + 304, keyE);
+	expand_key(key3);
+
+	copy(key3 + 160, key3 + 320, keyE);
 
 	for (int i = 0; i < 4; ++i)
 		for (int j = i + 1; j < 4; ++j)
@@ -386,8 +353,6 @@ int main() {
 	addRoundKey(plaintext, keyE);
 	print_msg(plaintext);
 	cout << endl;
-
-
 
 
 	return 0;
